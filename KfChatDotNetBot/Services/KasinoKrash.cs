@@ -75,10 +75,11 @@ public class KasinoKrash : IDisposable
         
         var krashBet = TheGame.Bets[index];
         TheGame.Bets.RemoveAt(index);
-        var payout = TheGame.CurrentMulti * krashBet.Wager - krashBet.Wager;
+        var multi = TheGame.CurrentMulti;
+        var payout = multi * krashBet.Wager - krashBet.Wager;
         var newBalance = await Money.NewWagerAsync(krashBet.Gambler.Id, krashBet.Wager, payout, WagerGame.Krash, ct: _ct);
         await _kfChatBot.SendChatMessageAsync(
-            $"{krashBet.Gambler.User.FormatUsername()}, you [color=limegreen][b]won[/b][/color] {await payout.FormatKasinoCurrencyAsync()}!",
+            $"{krashBet.Gambler.User.FormatUsername()}, you [color=limegreen][b]won[/b][/color] {await payout.FormatKasinoCurrencyAsync()} by cashing out the krash at {multi}x!",
             true, autoDeleteAfter: TimeSpan.FromSeconds(10));
         if (_kfChatBot.BotServices.KasinoShop != null)
         {
