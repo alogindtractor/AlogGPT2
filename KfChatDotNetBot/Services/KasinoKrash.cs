@@ -17,7 +17,7 @@ public class KasinoKrash : IDisposable
     private ChatBot _kfChatBot;
     private CancellationToken _ct;
     public KasinoKrashModel? TheGame;
-
+    public static decimal HOUSE_EDGE = (decimal)0.98;
     
     public KasinoKrash(ChatBot kfChatBot, CancellationToken ct = default) //the service itself
     {
@@ -100,6 +100,10 @@ public class KasinoKrash : IDisposable
         if (!TheGame.BetsAccepted) return;
         var bet = new KrashBet{Gambler = gambler, Wager = wager, Multi = multi};
         TheGame.Bets.Add(bet);
+        if (_kfChatBot.BotServices.KasinoShop != null)
+        {
+            HOUSE_EDGE = _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[gambler.User.KfId].HouseEdgeModifier;
+        }
         await SaveKrashState(TheGame);
     }
 
@@ -108,7 +112,12 @@ public class KasinoKrash : IDisposable
         TheGame = new KasinoKrashModel(creator);
         TheGame.Bets.Add(new KrashBet{Gambler = creator, Wager = wager, Multi = multi});
         await SaveKrashState(TheGame);
+        if (_kfChatBot.BotServices.KasinoShop != null)
+        {
+            HOUSE_EDGE = (HOUSE_EDGE + _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[creator.User.KfId].HouseEdgeModifier)/2;
+        }
         _ = RunGame();
+        
     }
     public async Task RunGame() //running the actual game
     {
@@ -119,16 +128,23 @@ public class KasinoKrash : IDisposable
             return;
         }
         var msg = await _kfChatBot.SendChatMessageAsync(
-            $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have 30 seconds to place your bets.", true);
+            $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have 30 seconds to place your bets. [ditto]!krash[/ditto] <amount> <optional multi>", true);
         var preGameTimer = TimeSpan.FromSeconds(30);
         var interval = TimeSpan.FromSeconds(1);
         var timer = new PeriodicTimer(interval);
+        
         while (await timer.WaitForNextTickAsync(_ct)) //timer before starting the game
         {
             var bets = "";
-            foreach (var bet in TheGame.Bets) bets += $"{bet.Gambler.User.FormatUsername()} is betting {bet.Wager}[br]";
+            foreach (var bet in TheGame.Bets)
+            {
+                bets += $"{bet.Gambler.User.FormatUsername()} is betting {bet.Wager}";
+                if (bet.Multi != -1) bets += $" on {bet.Multi}x!";
+                else bets += " on freehand!";
+                bets += "[br]";
+            }
             await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid,
-                $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have {preGameTimer} to place your bets.[br]{bets}");
+                $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have [b]{preGameTimer}[/b] to place your bets.[br]{bets}");
             preGameTimer -= interval;
             if (preGameTimer <= TimeSpan.Zero)
             {
@@ -152,7 +168,8 @@ public class KasinoKrash : IDisposable
         timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(_ct))
         {
-            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=limegreen]{TheGame.CurrentMulti}x");
+            TheGame.KrashAccepted = true;
+            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=limegreen]{Math.Truncate(TheGame.CurrentMulti*100)/100}x");
             TheGame.CurrentMulti += defaultGrowth;
             defaultGrowth *= growthRate;
             growthRate *= growthAcceleration;
@@ -190,7 +207,8 @@ public class KasinoKrash : IDisposable
                 }
             }
         }
-        
+
+        HOUSE_EDGE = 0.98m;
         //now close the game
         await Task.Delay(5000);
         await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
@@ -221,7 +239,7 @@ public class KasinoKrash : IDisposable
 
             // The core 1/x logic
             var result = 1.0 / (1.0 - r);
-
+            result *= (double)HOUSE_EDGE;
             // Clamp the result to your specific range
             if (result < minValue) result = minValue;
             if (result > maxValue) result = maxValue;
