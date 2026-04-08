@@ -50,6 +50,7 @@ public class KrashBetCommand : ICommand
         {
             //attempt to cash out a currently running game
             await botInstance.BotServices.KasinoKrash.AttemptKrash(gambler);
+            return;
         }
         if (!arguments.TryGetValue("multi", out var multiGroup))
         {
