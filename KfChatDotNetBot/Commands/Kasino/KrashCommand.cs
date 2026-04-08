@@ -28,6 +28,7 @@ public class KrashBetCommand : ICommand
         GroupCollection arguments,
         CancellationToken ctx)
     {
+        return;
         var cleanupDelay = TimeSpan.FromSeconds(10);
         
         if (message is { IsWhisper: false, MessageUuid: not null })
