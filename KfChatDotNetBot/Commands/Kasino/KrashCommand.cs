@@ -62,7 +62,7 @@ public class KrashBetCommand : ICommand
             multi = Convert.ToDecimal(multiGroup.Value);
         }
         wager = Convert.ToDecimal(amountGroup.Value);
-        decimal wagerLimit = 10;
+        //decimal wagerLimit = 10;
         if (wager > gambler.Balance)
         {
             await botInstance.SendChatMessageAsync(
@@ -71,13 +71,13 @@ public class KrashBetCommand : ICommand
             return;
         }
 
-        if (wager > wagerLimit)
+        /*if (wager > wagerLimit)
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you can't bet more than {wagerLimit} on krash during testing.",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(5));
             return;
-        }
+        }*/
         if (botInstance.BotServices.KasinoKrash.TheGame == null)
         {
             //start a new game
