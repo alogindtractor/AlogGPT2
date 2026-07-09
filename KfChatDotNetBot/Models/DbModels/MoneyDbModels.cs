@@ -311,7 +311,9 @@ public enum WagerGame
     [Description("Roulette but live")]
     Roulette,
     Krash,
-    Cecil
+    Cecil,
+    [Description("Rap Battle")]
+    RapBattle
 }
 
 public enum GamblerState

@@ -51,6 +51,15 @@
       <Content Include="NLog.config">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
+      <None Remove="rapbattle_feedback.txt" />
+      <!-- PreserveNewest so admins can edit the feedback pool in the output dir without rebuilds clobbering it -->
+      <None Remove="rapbattle_challenges.txt" />
+      <Content Update="Assets\rapbattle_challenges.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="Assets\rapbattle_feedback.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>

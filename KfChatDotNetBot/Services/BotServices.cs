@@ -47,6 +47,7 @@ public class BotServices
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
+    private Task? _rapBattleTimeoutSweeper;
     
     private string? _bmjTwitchUsername;
     private bool _twitchDisabled;
@@ -114,6 +115,28 @@ public class BotServices
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
         _howlggGetUserTimer = HowlggGetUserTimer();
+        _rapBattleTimeoutSweeper = RapBattleTimeoutSweeperTask();
+    }
+
+    // Durable replacement for the rap battle's old in-memory timeout timers: rap battle state lives in
+    // Redis, and this periodically refunds any battle whose deadline has passed - so timeouts still fire
+    // after a restart. No-ops cheaply when Redis isn't configured.
+    private async Task RapBattleTimeoutSweeperTask()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        {
+            if (_chatBot.InitialStartCooldown) continue;
+            try
+            {
+                await Commands.Kasino.RapBattleCommand.SweepExpiredBattlesAsync(_chatBot);
+            }
+            catch (Exception e)
+            {
+                _logger.Error("Rap battle timeout sweep failed");
+                _logger.Error(e);
+            }
+        }
     }
 
     private async Task BuildKasinoKrash()
